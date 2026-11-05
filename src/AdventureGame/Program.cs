@@ -7,33 +7,89 @@ public class Program
 	public const string EAST = "EAST";
 	public const string WEST = "WEST";
 	public const string QUIT = "QUIT";
-	
+	public const string GO = "GO";
+	public const string LOOK = "LOOK";
+
 	public static void Main()
 	{
 		Room entrance = new Room("Entrance", "A dry stone chamber with daylight spilling through the doorway.");
 		Room gallery = new Room("Gallery", "A long gallery lined with faded banners.");
 		Room archive = new Room("Archive", "An archive whose shelves hold dust-covered chronicles.");
 
-		entrance.East = gallery;
-		gallery.West = entrance;
-		gallery.North = archive;
-		archive.South = gallery;
+		entrance.Connect(EAST, gallery);
+		gallery.Connect(NORTH, archive);
 
-		ShowRoom(gallery);
+		Player player = new Player(entrance);
+
+		Console.WriteLine("Adventure Game — Movement Lab");
+		Console.WriteLine($"Commands: {GO} <direction>, {LOOK}, {QUIT}.");
+
+		ShowRoom(player.CurrentRoom);
 
 		while (true)
 		{
-			Console.Write($"Enter {NORTH}, {SOUTH}, {EAST}, {WEST}, or {QUIT} to stop: ");
+			Console.Write("> ");
 
-			string direction = NormalizeInput(Console.ReadLine());
+			string normalized = NormalizeInput(Console.ReadLine());
 
-			if (direction == QUIT)
+			if (normalized.Length == 0)
 			{
-				Console.WriteLine("Room inspector closed.");
+				Console.WriteLine($"Enter {GO} <direction>, {LOOK}, or {QUIT}.");
+				continue;
+			}
+
+			string[] words = normalized.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+			string command = words[0];
+
+			if (command == QUIT)
+			{
+				if (words.Length != 1)
+				{
+					Console.WriteLine($"{QUIT} takes no arguments.");
+					continue;
+				}
+
+				Console.WriteLine("You leave the dungeon.");
 				break;
 			}
 
-			PreviewExit(gallery, direction);
+			if (command == LOOK)
+			{
+				if (words.Length != 1)
+				{
+					Console.WriteLine($"{LOOK} takes no arguments.");
+					continue;
+				}
+
+				ShowRoom(player.CurrentRoom);
+				continue;
+			}
+
+			if (command == GO)
+			{
+				if (words.Length != 2)
+				{
+					Console.WriteLine($"Use {GO} followed by one direction: {NORTH}, {SOUTH}, {EAST}, or {WEST}.");
+					continue;
+				}
+
+				string direction = words[1];
+				bool moved = player.TryMove(direction, out string message);
+				Console.WriteLine(message);
+
+				if (moved)
+				{
+					ShowRoom(player.CurrentRoom);
+				}
+				else
+				{
+					Console.WriteLine($"You remain in {player.CurrentRoom.Name}.");
+				}
+
+				continue;
+			}
+
+			Console.WriteLine($"Unknown command. Use {GO} <direction>, {LOOK}, or {QUIT}.");
 		}
 	}
 
