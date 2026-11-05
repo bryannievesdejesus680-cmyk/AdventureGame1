@@ -6,7 +6,9 @@ public class Room
 {
 	public string Name { get; }
 	public string Description { get; set; }
-	public Item? Item { get; private set; }
+	private readonly List<Item> _items = new List<Item>();
+
+	public IReadOnlyList<Item> Items => _items.AsReadOnly();
 
 	public Room? North { get; private set; }
 	public Room? South { get; private set; }
@@ -62,12 +64,35 @@ public class Room
 	}
 	public void PlaceItem(Item item)
 	{
-		Item = item ?? throw new ArgumentNullException(nameof(item));
+		ArgumentNullException.ThrowIfNull(item);
+
+		bool found = _items.Exists(current => ReferenceEquals(current, item));
+
+		if (found)
+		{
+			throw new InvalidOperationException("This room already contains the item.");
+		}
+
+		_items.Add(item);
 	}
 
-	public void RemoveItem()
+	public void RemoveItem(Item item)
 	{
-		Item = null;
+		ArgumentNullException.ThrowIfNull(item);
+
+		int itemIndex = _items.FindIndex(current => ReferenceEquals(current, item));
+
+		if (itemIndex < 0)
+		{
+			throw new InvalidOperationException("This room does not contain the item.");
+		}
+
+		_items.RemoveAt(itemIndex);
+	}
+	public Item? FindItem(string itemName)
+	{
+		return _items.Find(item =>
+			string.Equals(item.Name, itemName, StringComparison.OrdinalIgnoreCase));
 	}
 	private void SetNeighbor(string direction, Room neighbor)
 	{
