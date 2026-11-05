@@ -5,6 +5,7 @@ namespace AdventureGame;
 public class Player
 {
 	public Room CurrentRoom { get; private set; }
+	public Item? HeldItem { get; private set; }
 
 	public Player(Room startingRoom)
 	{
@@ -29,6 +30,28 @@ public class Player
 
 		CurrentRoom = destination;
 		message = $"You move {direction} to {CurrentRoom.Name}.";
+		return true;
+	}
+	public bool TryTake(string itemName, out string message)
+	{
+	
+		if (HeldItem is not null)
+		{
+			message = $"You are already carrying {HeldItem.Name}.";
+			return false;
+		}
+
+		Item? roomItem = CurrentRoom.Item;
+
+		if (roomItem is null || !string.Equals(roomItem.Name, itemName, StringComparison.OrdinalIgnoreCase))
+		{
+			message = $"There is no {itemName} in {CurrentRoom.Name}.";
+			return false;
+		}
+
+		CurrentRoom.RemoveItem();
+		HeldItem = roomItem;
+		message = $"You take the {roomItem.Name}.";
 		return true;
 	}
 }

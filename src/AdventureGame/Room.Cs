@@ -6,6 +6,7 @@ public class Room
 {
 	public string Name { get; }
 	public string Description { get; set; }
+	public Item? Item { get; private set; }
 
 	public Room? North { get; private set; }
 	public Room? South { get; private set; }
@@ -59,7 +60,15 @@ public class Room
 		SetNeighbor(direction, neighbor);
 		neighbor.SetNeighbor(opposite, this);
 	}
+	public void PlaceItem(Item item)
+	{
+		Item = item ?? throw new ArgumentNullException(nameof(item));
+	}
 
+	public void RemoveItem()
+	{
+		Item = null;
+	}
 	private void SetNeighbor(string direction, Room neighbor)
 	{
 		switch (direction)

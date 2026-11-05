@@ -9,7 +9,7 @@ public class Program
 	public const string QUIT = "QUIT";
 	public const string GO = "GO";
 	public const string LOOK = "LOOK";
-
+	public const string TAKE = "TAKE";
 	public static void Main()
 	{
 		Room entrance = new Room("Entrance", "A dry stone chamber with daylight spilling through the doorway.");
@@ -18,11 +18,16 @@ public class Program
 
 		entrance.Connect(EAST, gallery);
 		gallery.Connect(NORTH, archive);
+		Item oldCoin = new Item("Old Coin", "A tarnished coin stamped with a forgotten crest.");
+		Item brassToken = new Item("Brass Token", "A square brass token etched with a small tower.");
+
+		gallery.PlaceItem(oldCoin);
+		archive.PlaceItem(brassToken);
 
 		Player player = new Player(entrance);
 
-		Console.WriteLine("Adventure Game — Movement Lab");
-		Console.WriteLine($"Commands: {GO} <direction>, {LOOK}, {QUIT}.");
+		Console.WriteLine("Adventure Game — Item Transfer Lab");
+		Console.WriteLine($"Enter {GO} <direction>, {LOOK}, {TAKE} <item name>, or {QUIT}.");
 
 		ShowRoom(player.CurrentRoom);
 
@@ -88,8 +93,21 @@ public class Program
 
 				continue;
 			}
+			if (command == TAKE)
+			{
+				if (words.Length < 2)
+				{
+					Console.WriteLine($"Use {TAKE} followed by an item name.");
+					continue;
+				}
 
-			Console.WriteLine($"Unknown command. Use {GO} <direction>, {LOOK}, or {QUIT}.");
+				string itemName = string.Join(" ", words, 1, words.Length - 1);
+				player.TryTake(itemName, out string message);
+				Console.WriteLine(message);
+				continue;
+			}
+
+			Console.WriteLine($"Unknown command. Use {GO} <direction>, {LOOK}, {TAKE} <item name>, or {QUIT}.");
 		}
 	}
 
@@ -101,6 +119,7 @@ public class Program
 	public static void ShowRoom(Room room)
 	{
 		Console.WriteLine($"{room.Name}: {room.Description}");
+		Console.WriteLine($"  Items: {room.Item?.Name ?? "(none)"}");
 		Console.WriteLine($"  {NORTH}: {room.North?.Name ?? "(none)"}");
 		Console.WriteLine($"  {SOUTH}: {room.South?.Name ?? "(none)"}");
 		Console.WriteLine($"   {EAST}: {room.East?.Name ?? "(none)"}");
