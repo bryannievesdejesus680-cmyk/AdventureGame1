@@ -1,10 +1,10 @@
 using static Program;
-
 namespace AdventureGame;
 
 public class Player
 {
 	public Room CurrentRoom { get; private set; }
+	public string? ReturnDirection { get; private set; }
 	private readonly List<Item> _inventory = new List<Item>();
 
 	public IReadOnlyList<Item> Inventory => _inventory.AsReadOnly();
@@ -21,7 +21,6 @@ public class Player
 			message = $"Unknown direction {direction}. Choose {NORTH}, {SOUTH}, {EAST}, or {WEST}.";
 			return false;
 		}
-
 		Room? destination = CurrentRoom.GetNeighbor(direction);
 
 		if (destination is null)
@@ -29,8 +28,8 @@ public class Player
 			message = $"There is no exit {direction} from {CurrentRoom.Name}.";
 			return false;
 		}
-
-		CurrentRoom = destination;
+    ReturnDirection = Room.GetReciprocalDirection(direction);
+	  CurrentRoom = destination;
 		message = $"You move {direction} to {CurrentRoom.Name}.";
 		return true;
 	}
