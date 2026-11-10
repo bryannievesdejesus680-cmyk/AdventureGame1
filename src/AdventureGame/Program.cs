@@ -1,320 +1,246 @@
 ﻿using AdventureGame;
+using static AdventureGame.ICommand;
+using static AdventureGame.Room;
+using System.Collections.Generic;
 
 public class Program
 {
-    
-    public const string NORTH = "NORTH";
-    public const string SOUTH = "SOUTH";
-    public const string EAST = "EAST";
-    public const string WEST = "WEST";
 
-    public const string QUIT = "QUIT";
-    public const string GO = "GO";
-    public const string LOOK = "LOOK";
-    public const string TAKE = "TAKE";
-    public const string DROP = "DROP";
-    public const string INVENTORY = "INVENTORY";
+	public const string NORTH = "NORTH";
+	public const string SOUTH = "SOUTH";
+	public const string EAST = "EAST";
+	public const string WEST = "WEST";
 
-    public static void Main()
-    {
-        //Created Rooms
-        Room entrance = new Room("Entrance","A dry stone chamber with daylight spilling through the doorway.");
+	public const string QUIT = "QUIT";
+	public const string GO = "GO";
+	public const string LOOK = "LOOK";
+	public const string TAKE = "TAKE";
+	public const string DROP = "DROP";
+	public const string INVENTORY = "INVENTORY";
 
-        Room gallery = new Room("Gallery","A long gallery lined with faded banners.");
+	public static void Main()
+	{
+		//Created Rooms
+		Room entrance = new Room("Entrance", "A dry stone chamber with daylight spilling through the doorway.");
 
-        Room archive = new Room("Archive","An archive whose shelves hold dust-covered chronicles.", false);
+		Room gallery = new Room("Gallery", "A long gallery lined with faded banners.");
 
-        // Connect rooms
-        entrance.Connect(EAST, gallery);
-        gallery.Connect(NORTH, archive);
+		Room archive = new Room("Archive", "An archive whose shelves hold dust-covered chronicles.", false);
 
-        Item oldCoin = new Item("Old Coin","A tarnished coin stamped with a forgotten crest.");
-        Item brassToken = new Item("Brass Token","A square brass token etched with a small tower.");
-        Item copperRing = new Item("Copper Ring","A small ring with a dull copper finish.");
+		// Connect rooms
+		entrance.Connect(EAST, gallery);
+		gallery.Connect(NORTH, archive);
 
-        gallery.PlaceItem(copperRing);
-        gallery.PlaceItem(oldCoin);
-        archive.PlaceItem(brassToken);
+		Item oldCoin = new Item("Old Coin", "A tarnished coin stamped with a forgotten crest.");
+		Item brassToken = new Item("Brass Token", "A square brass token etched with a small tower.");
+		Item copperRing = new Item("Copper Ring", "A small ring with a dull copper finish.");
 
-        Player player = new Player(entrance);
+		gallery.PlaceItem(copperRing);
+		gallery.PlaceItem(oldCoin);
+		archive.PlaceItem(brassToken);
 
-        Console.WriteLine("Adventure Game — Darkness and Grue Lab");
+		Player player = new Player(entrance);
+		IReadOnlyList<ICommand> commands = new ICommand[]
+		{
+				new GoCommand(),
+				new LookCommand(),
+				new TakeCommand(),
+				new DropCommand(),
+				new InventoryCommand()
+		};
 
-        Console.WriteLine( $"Commands: {GO} <direction>, {LOOK}, " + $"{TAKE} <item name>, {DROP} <item name>, " +
-				$"{INVENTORY}, {QUIT}.");
+		Console.WriteLine("Adventure Game — Darkness and Grue Lab");
 
-        ShowRoom(player.CurrentRoom);
+		Console.WriteLine($"Commands: {GO} <direction>, {LOOK}, " + $"{TAKE} <item name>, {DROP} <item name>, " +
+		$"{INVENTORY}, {QUIT}.");
 
-        // Main game loop
-        while (true)
-        {
-            Console.Write("> ");
+		ShowRoom(player.CurrentRoom);
 
-            string normalized = NormalizeInput(Console.ReadLine());
+		// Main game loop
+		while (true)
+		{
+			Console.Write("> ");
+			string normalized = NormalizeInput(Console.ReadLine());
 
-            if (normalized.Length == 0)
-            {
-                Console.WriteLine(
-                    $"Enter {GO} <direction>, {LOOK}, " +
-                    $"{TAKE} <item name>, {DROP} <item name>, " +
-                    $"{INVENTORY}, or {QUIT}.");
+			if (normalized.Length == 0)
+			{
+				Console.WriteLine($"Enter {GO} <direction>, {LOOK}, {TAKE} <item name>, " +
+					$"{DROP} <item name>, {INVENTORY}, or {QUIT}.");
+				continue;
+			}
 
-                continue;
-            }
+			string[] words = normalized.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+			string verb = words[0];
+			string target = words.Length > 1 ? string.Join(" ", words, 1, words.Length - 1) : "";
 
-            string[] words = normalized.Split(
-                (char[]?)null,
-                StringSplitOptions.RemoveEmptyEntries);
+			if (verb == QUIT)
+			{
+				if (words.Length != 1)
+				{
+					Console.WriteLine($"{QUIT} takes no arguments.");
+					continue;
+				}
 
-            string command = words[0];
+				Console.WriteLine("You leave the dungeon.");
+				break;
+			}
 
-            string target = words.Length > 1
-                ? string.Join(" ", words, 1, words.Length - 1)
-                : "";
+			ICommand? selected = FindCommand(verb, commands);
 
-            string? syntaxError = null;
+			if (selected is null)
+			{
+				Console.WriteLine($"Unknown command. Use {GO} <direction>, {LOOK}, {TAKE} <item name>, " +
+					$"{DROP} <item name>, {INVENTORY}, or {QUIT}.");
+				continue;
+			}
 
-            // PHASE 1: Validate command syntax
+			if (!selected.HasValidArguments(words, out string syntaxMessage))
+			{
+				Console.WriteLine(syntaxMessage);
+				continue;
+			}
 
-            if (command == QUIT || command == LOOK || command == INVENTORY)
-	          {
-		         if (words.Length != 1)
-		          {
-			         syntaxError = $"{command} takes no arguments.";
-		          }
-	          }
-            
-            else if (command == GO)
-            {
-                if (words.Length != 2)
-                {
-                    syntaxError = $"Use {GO} followed by one direction.";
-                }
-            }
-            else if (command == TAKE || command == DROP)
-            {
-                if (words.Length < 2)
-                {
-                    syntaxError =
-                        $"Use {command} followed by an item name.";
-                }
-            }
-            else
-            {
-                syntaxError =
-                    $"Unknown command. Use {GO} <direction>, " +
-                    $"{LOOK}, {TAKE} <item name>, " +
-                    $"{DROP} <item name>, {INVENTORY}, or {QUIT}.";
-            }
+			bool safeRetreat = verb == GO && target == player.ReturnDirection;
 
-            if (syntaxError is not null)
-            {
-                Console.WriteLine(syntaxError);
-                continue;
-            }
+			if (!player.CurrentRoom.IsLit && !safeRetreat)
+			{
+				Console.WriteLine(selected.DescribeInterruptedAttempt());
+				Console.WriteLine("A Grue devours you. You have been defeated.");
+				break;
+			}
 
-            // PHASE 2: Check the Grue hazard
+			selected.Execute(player, target);
 
-            bool safeInDarkness =
-                command == QUIT ||
-                (command == GO &&
-                 target == player.ReturnDirection);
+		}
 
-            if (!player.CurrentRoom.IsLit && !safeInDarkness)
-            {
-                Console.WriteLine(DescribeGrueEncounter(command));
+	}
 
-                Console.WriteLine(
-                    "A Grue devours you. You have been defeated.");
 
-                break;
-            }
+	private static ICommand? FindCommand(
+			string verb,
+			IReadOnlyList<ICommand> commands)
+	{
+		foreach (ICommand candidate in commands)
+		{
+			if (candidate.Verb == verb)
+			{
+				return candidate;
+			}
+		}
 
-            // PHASE 3: Execute the normal command
+		return null;
+	}
+	public static string NormalizeInput(string? input)
+	{
+		return input?.Trim().ToUpperInvariant() ?? QUIT;
+	}
 
-            if (command == QUIT)
-            {
-                Console.WriteLine("You leave the dungeon.");
-                break;
-            }
-            else if (command == LOOK)
-            {
-                ShowRoom(player.CurrentRoom);
-            }
-            else if (command == INVENTORY)
-            {
-                ShowInventory(player);
-            }
-            else if (command == GO)
-            {
-                bool moved = player.TryMove(
-                    target,
-                    out string message);
+	// Display room information
+	public static void ShowRoom(Room room)
+	{
+		if (!room.IsLit)
+		{
+			Console.WriteLine(
+					"It is dark. You cannot see the room or its contents.");
 
-                Console.WriteLine(message);
+			return;
+		}
 
-                if (moved)
-                {
-                    ShowRoom(player.CurrentRoom);
-                }
-                else
-                {
-                    Console.WriteLine(
-                        $"You remain in {player.CurrentRoom.Name}.");
-                }
-            }
-            else if (command == TAKE)
-            {
-                player.TryTake(target, out string message);
-                Console.WriteLine(message);
-            }
-            else if (command == DROP)
-            {
-                player.TryDrop(target, out string message);
-                Console.WriteLine(message);
-            }
-        }
-    }
+		Console.WriteLine($"{room.Name}: {room.Description}");
 
-    // Describe Grue encounter
-    private static string DescribeGrueEncounter(string command)
-    {
-        if (command == GO)
-        {
-            return "You rush blindly ahead and stumble upon an angry woken-up beast.";
-        }
+		Console.WriteLine(
+				$" {NORTH}: {room.North?.Name ?? "(none)"}");
 
-        if (command == INVENTORY)
-        {
-            return "You rummage through your belongings looking for something, but something else finds you first.";
-        }
+		Console.WriteLine(
+				$" {SOUTH}: {room.South?.Name ?? "(none)"}");
 
-        if (command == DROP)
-        {
-            return "You fumble with one of your belongings. The noise attracts something lurking in the darkness.";
-        }
+		Console.WriteLine(
+				$" {EAST}: {room.East?.Name ?? "(none)"}");
 
-        if (command == TAKE)
-        {
-            return "You reach into the blackness. Something reaches back.";
-        }
+		Console.WriteLine(
+				$" {WEST}: {room.West?.Name ?? "(none)"}");
 
-        // Default narration, including LOOK
-        return "A heavy movement in the darkness interrupts your thoughts.";
-    }
+		if (room.Items.Count == 0)
+		{
+			Console.WriteLine(" Items: (none)");
+			return;
+		}
 
-    // Normalize user input
-    public static string NormalizeInput(string? input)
-    {
-        return input?.Trim().ToUpperInvariant() ?? QUIT;
-    }
+		string itemList = string.Join(
+				", ",
+				room.Items.Select(item => item.Name));
 
-    // Display room information
-    public static void ShowRoom(Room room)
-    {
-        if (!room.IsLit)
-        {
-            Console.WriteLine(
-                "It is dark. You cannot see the room or its contents.");
+		Console.WriteLine($" Items: {itemList}");
+	}
 
-            return;
-        }
+	// Preview connected room
+	public static void PreviewExit(Room fromRoom, string direction)
+	{
+		if (direction != NORTH &&
+				direction != SOUTH &&
+				direction != EAST &&
+				direction != WEST)
+		{
+			Console.WriteLine(
+					$"Unknown direction. Choose {NORTH}, {SOUTH}, " +
+					$"{EAST}, or {WEST}.");
 
-        Console.WriteLine($"{room.Name}: {room.Description}");
+			return;
+		}
 
-        Console.WriteLine(
-            $" {NORTH}: {room.North?.Name ?? "(none)"}");
+		if (!fromRoom.IsLit)
+		{
+			Console.WriteLine(
+					"It is dark. You cannot see the room or its contents.");
+			return;
+		}
 
-        Console.WriteLine(
-            $" {SOUTH}: {room.South?.Name ?? "(none)"}");
+		Room? neighbor = direction switch
+		{
+			NORTH => fromRoom.North,
+			SOUTH => fromRoom.South,
+			EAST => fromRoom.East,
+			WEST => fromRoom.West,
+			_ => null
+		};
 
-        Console.WriteLine(
-            $" {EAST}: {room.East?.Name ?? "(none)"}");
+		if (neighbor is null)
+		{
+			Console.WriteLine(
+					$"There is no connected room {direction} of {fromRoom.Name}.");
 
-        Console.WriteLine(
-            $" {WEST}: {room.West?.Name ?? "(none)"}");
+			return;
+		}
 
-        if (room.Items.Count == 0)
-        {
-            Console.WriteLine(" Items: (none)");
-            return;
-        }
+		if (!neighbor.IsLit)
+		{
+			Console.WriteLine(
+					$"The passage {direction} from {fromRoom.Name} leads into darkness.");
+			return;
+		}
 
-        string itemList = string.Join(
-            ", ",
-            room.Items.Select(item => item.Name));
+		Console.WriteLine(
+				$"Connected room {direction} of {fromRoom.Name}: {neighbor.Name}");
 
-        Console.WriteLine($" Items: {itemList}");
-    }
+		Console.WriteLine($"Description: {neighbor.Description}");
+	}
 
-    // Preview connected room
-    public static void PreviewExit(Room fromRoom, string direction)
-    {
-        if (direction != NORTH &&
-            direction != SOUTH &&
-            direction != EAST &&
-            direction != WEST)
-        {
-            Console.WriteLine(
-                $"Unknown direction. Choose {NORTH}, {SOUTH}, " +
-                $"{EAST}, or {WEST}.");
+	// Display player inventory
+	public static void ShowInventory(Player player)
+	{
+		if (player.Inventory.Count == 0)
+		{
+			Console.WriteLine("Inventory: (empty)");
+			return;
+		}
 
-            return;
-        }
+		Console.WriteLine("Inventory:");
 
-        if (!fromRoom.IsLit)
-        {
-            Console.WriteLine(
-                "It is dark. You cannot see the room or its contents.");
-            return;
-        }
-
-        Room? neighbor = direction switch
-        {
-            NORTH => fromRoom.North,
-            SOUTH => fromRoom.South,
-            EAST => fromRoom.East,
-            WEST => fromRoom.West,
-            _ => null
-        };
-
-        if (neighbor is null)
-        {
-            Console.WriteLine(
-                $"There is no connected room {direction} of {fromRoom.Name}.");
-
-            return;
-        }
-
-        if (!neighbor.IsLit)
-        {
-            Console.WriteLine(
-                $"The connected room {direction} is dark. " +
-                "Its description cannot be seen.");
-            return;
-        }
-
-        Console.WriteLine(
-            $"Connected room {direction} of {fromRoom.Name}: {neighbor.Name}");
-
-        Console.WriteLine($"Description: {neighbor.Description}");
-    }
-
-    // Display player inventory
-    public static void ShowInventory(Player player)
-    {
-        if (player.Inventory.Count == 0)
-        {
-            Console.WriteLine("Inventory: (empty)");
-            return;
-        }
-
-        Console.WriteLine("Inventory:");
-
-        foreach (Item item in player.Inventory)
-        {
-            Console.WriteLine(
-                $" - {item.Name}: {item.Description}");
-        }
-    }
+		foreach (Item item in player.Inventory)
+		{
+			Console.WriteLine(
+					$" - {item.Name}: {item.Description}");
+		}
+	}
 }
+

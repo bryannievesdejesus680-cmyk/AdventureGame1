@@ -53,4 +53,30 @@ public class GrueCommandTests
 		Assert.DoesNotContain("You take the Brass Token.", fatalTake);
 		Assert.DoesNotContain("You leave the dungeon.", fatalTake);
 	}
+
+	[Fact]
+	public void InterruptedCommands_KeepTheirNarrationAndSkipNormalEffects()
+	{
+		string move = Play("GO EAST", "GO NORTH", "GO UP", "QUIT");
+		Assert.Contains("You rush blindly ahead", move);
+		Assert.DoesNotContain("Unknown direction UP.", move);
+		Assert.DoesNotContain("You leave the dungeon.", move);
+
+		string inventory = Play("GO EAST", "GO NORTH", "INVENTORY", "QUIT");
+		Assert.Contains("You rummage through your belongings", inventory);
+		Assert.DoesNotContain("Inventory:", inventory);
+
+		string take = Play("GO EAST", "GO NORTH", "TAKE BRASS TOKEN", "QUIT");
+		Assert.Contains("You reach into the blackness.", take);
+		Assert.DoesNotContain("You take the Brass Token.", take);
+	}
+	[Fact]
+	public void UnknownVerbInDarkness_IsRejectedAndRetreatStillWorks()
+	{
+		string output = Play("GO EAST", "GO NORTH", "FLY NORTH", "GO SOUTH", "QUIT");
+		Assert.Contains("Unknown command. Use GO <direction>", output);
+		Assert.Contains("You move SOUTH to Gallery.", output);
+		Assert.DoesNotContain("A Grue devours you.", output);
+		Assert.Contains("You leave the dungeon.", output);
+	}
 }
