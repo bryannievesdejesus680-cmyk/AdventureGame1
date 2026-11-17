@@ -13,8 +13,13 @@ public class Player
 	{
 		CurrentRoom = startingRoom ?? throw new ArgumentNullException(nameof(startingRoom));
 	}
-
+	public Item? FindItem(string itemName)
+	{
+		return _inventory.Find(item =>
+		string.Equals(item.Name, itemName, StringComparison.OrdinalIgnoreCase));
+	}
 	public bool TryMove(string direction, out string message)
+	
 	{
 		if (direction != NORTH && direction != SOUTH && direction != EAST && direction != WEST)
 		{
@@ -28,8 +33,8 @@ public class Player
 			message = $"There is no exit {direction} from {CurrentRoom.Name}.";
 			return false;
 		}
-    ReturnDirection = Room.GetReciprocalDirection(direction);
-	  CurrentRoom = destination;
+		ReturnDirection = Room.GetReciprocalDirection(direction);
+		CurrentRoom = destination;
 		message = $"You move {direction} to {CurrentRoom.Name}.";
 		return true;
 	}

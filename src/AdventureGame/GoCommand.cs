@@ -23,7 +23,7 @@ public class GoCommand : ICommand
 
 		if (moved)
 		{
-			Program.ShowRoom(player.CurrentRoom);
+			Program.ShowRoom(player);
 		}
 		else
 		{

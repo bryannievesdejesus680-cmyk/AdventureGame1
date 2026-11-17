@@ -6,6 +6,7 @@ public interface ICommand
 	public const string LOOK = "LOOK";
 	public const string GO = "GO";
 	public const string TAKE = "TAKE";
+	public const string USE = "USE";
 	public const string DROP = "DROP";
 	public const string INVENTORY = "INVENTORY";
 
