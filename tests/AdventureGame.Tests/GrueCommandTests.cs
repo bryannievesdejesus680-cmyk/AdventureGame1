@@ -71,7 +71,7 @@ public class GrueCommandTests
 
 		string afterDrop = take.Substring(drop);
 
-		Assert.Contains("Items: Brass Token, Lamp", afterDrop);
+		Assert.Contains("Items: Brass Token, Iron Key, Lamp", afterDrop);
 		Assert.Contains("You take the Lamp.", afterDrop);
 		Assert.DoesNotContain("The room falls dark.", afterDrop);
 		Assert.DoesNotContain("A Grue devours you.", afterDrop);
@@ -160,6 +160,97 @@ public class GrueCommandTests
 		Assert.DoesNotContain("A Grue devours you.", output);
 		Assert.Contains("You leave the dungeon.", output);
 	}
+
+	[Fact]
+	public void Door_UnlockAndRoundTrip_PreserveKeyAndDoorState()
+	{
+		string output = Play(
+				"GO EAST", "GO EAST", "OPEN IRON DOOR",
+				"TAKE LAMP", "USE LAMP",
+				"GO NORTH", "TAKE IRON KEY",
+				"GO SOUTH", "OPEN IRON DOOR",
+				"INVENTORY", "GO EAST", "GO WEST",
+				"OPEN IRON DOOR", "QUIT");
+
+		int blocked = output.IndexOf(
+				"The Iron Door is closed. You cannot pass.",
+				StringComparison.Ordinal);
+
+		int locked = output.IndexOf(
+				"The Iron Door is locked. You need its key.",
+				StringComparison.Ordinal);
+
+		int unlocked = output.IndexOf(
+				"You unlock and open the Iron Door.",
+				StringComparison.Ordinal);
+
+		int entered = output.IndexOf(
+				"You move EAST to Storage.",
+				StringComparison.Ordinal);
+
+		int returned = output.IndexOf(
+				"You move WEST to Gallery.",
+				StringComparison.Ordinal);
+
+		int alreadyOpen = output.IndexOf(
+				"The Iron Door is already open.",
+				StringComparison.Ordinal);
+
+		Assert.True(blocked >= 0);
+		Assert.True(locked > blocked);
+		Assert.True(unlocked > locked);
+		Assert.True(entered > unlocked);
+		Assert.True(returned > entered);
+		Assert.True(alreadyOpen > returned);
+
+		Assert.Contains(
+				"  - Iron Key: A cold iron key with a square bow.",
+				output);
+
+		Assert.DoesNotContain("A Grue devours you.", output);
+		Assert.Contains("You leave the dungeon.", output);
+	}
+
+	[Fact]
+	public void Open_GruePrecedesLookupButMalformedOpenIsSafe()
+	{
+		string fatal = Play(
+				"GO EAST", "GO NORTH",
+				"OPEN MICROPHONE", "QUIT");
+
+		Assert.Contains("A Grue devours you.", fatal);
+		Assert.DoesNotContain(
+				"There is no MICROPHONE to open", fatal);
+		Assert.DoesNotContain(
+				"You leave the dungeon.", fatal);
+
+		string namedDoor = Play(
+				"GO EAST", "GO NORTH",
+				"OPEN IRON DOOR", "QUIT");
+
+		Assert.Contains("A Grue devours you.", namedDoor);
+		Assert.DoesNotContain(
+				"The Iron Door is locked.", namedDoor);
+		Assert.DoesNotContain(
+				"There is no IRON DOOR to open", namedDoor);
+
+		string malformed = Play(
+				"GO EAST", "GO NORTH",
+				"OPEN", "GO SOUTH", "QUIT");
+
+		Assert.Contains(
+				"Use OPEN followed by an object name.",
+				malformed);
+		Assert.Contains(
+				"You move SOUTH to Gallery.",
+				malformed);
+		Assert.DoesNotContain(
+				"A Grue devours you.", malformed);
+		Assert.Contains(
+				"You leave the dungeon.", malformed);
+	}
+
+
 
 	// Helper: ejecutar el juego con comandos simulados.
 	private static string Play(params string[] commands)

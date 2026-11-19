@@ -1,4 +1,4 @@
-
+using System.Collections.Generic;
 using static Program;
 namespace AdventureGame;
 
@@ -7,10 +7,10 @@ public class Room
 	public string Name { get; }
 	public string Description { get; set; }
 	private readonly List<Item> _items = new List<Item>();
+	private readonly Dictionary<string, Door> _doors = new Dictionary<string, Door>();
 	public bool IsLit { get; }
 
 	public IReadOnlyList<Item> Items => _items.AsReadOnly();
-
 	public Room? North { get; private set; }
 	public Room? South { get; private set; }
 	public Room? East { get; private set; }
@@ -128,5 +128,51 @@ public class Room
 			case WEST: West = neighbor; break;
 			default: throw new ArgumentException($"Use {NORTH}, {SOUTH}, {EAST}, or {WEST}.", nameof(direction));
 		}
+	}
+	public Door? GetDoor(string direction)
+	{
+		return _doors.TryGetValue(direction, out Door? door) ? door : null;
+	}
+
+	public Door? FindDoor(string doorName)
+	{
+		foreach (Door door in _doors.Values)
+		{
+			if (string.Equals(door.Name, doorName, StringComparison.OrdinalIgnoreCase))
+			{
+				return door;
+			}
+		}
+
+		return null;
+	}
+
+	public void AttachDoor(string direction, Door door)
+	{
+		ArgumentNullException.ThrowIfNull(door);
+
+		string opposite = direction switch
+		{
+			NORTH => SOUTH,
+			SOUTH => NORTH,
+			EAST => WEST,
+			WEST => EAST,
+			_ => throw new ArgumentException("Use a cardinal direction.", nameof(direction))
+		};
+
+		Room? neighbor = GetNeighbor(direction);
+
+		if (neighbor is null || !ReferenceEquals(neighbor.GetNeighbor(opposite), this))
+		{
+			throw new InvalidOperationException("Attach a door to an existing reciprocal passage.");
+		}
+
+		if (GetDoor(direction) is not null || neighbor.GetDoor(opposite) is not null)
+		{
+			throw new InvalidOperationException("This passage already has a door.");
+		}
+
+		_doors.Add(direction, door);
+		neighbor._doors.Add(opposite, door);
 	}
 }

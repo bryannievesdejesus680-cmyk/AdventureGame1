@@ -18,14 +18,51 @@ public class Player
 		return _inventory.Find(item =>
 		string.Equals(item.Name, itemName, StringComparison.OrdinalIgnoreCase));
 	}
+
+	public bool TryTake(string itemName, out string message)
+	{
+		Item? item = CurrentRoom.FindItem(itemName);
+
+		if (item is null)
+		{
+			message = $"There is no {itemName} here.";
+			return false;
+		}
+
+		CurrentRoom.RemoveItem(item);
+		_inventory.Add(item);
+
+		message = $"You take the {item.Name}.";
+		return true;
+	}
+
+
+
+	public bool TryDrop(string itemName, out string message)
+	{
+		Item? item = FindItem(itemName);
+
+		if (item is null)
+		{
+			message = $"You do not have {itemName}.";
+			return false;
+		}
+
+		CurrentRoom.PlaceItem(item);
+		_inventory.Remove(item);
+
+		message = $"You drop the {item.Name}.";
+		return true;
+	}
+
 	public bool TryMove(string direction, out string message)
-	
 	{
 		if (direction != NORTH && direction != SOUTH && direction != EAST && direction != WEST)
 		{
 			message = $"Unknown direction {direction}. Choose {NORTH}, {SOUTH}, {EAST}, or {WEST}.";
 			return false;
 		}
+
 		Room? destination = CurrentRoom.GetNeighbor(direction);
 
 		if (destination is null)
@@ -33,43 +70,26 @@ public class Player
 			message = $"There is no exit {direction} from {CurrentRoom.Name}.";
 			return false;
 		}
-		ReturnDirection = Room.GetReciprocalDirection(direction);
+
+		Door? door = CurrentRoom.GetDoor(direction);
+
+		if (door is not null && !door.IsOpen)
+		{
+			message = $"The {door.Name} is closed. You cannot pass.";
+			return false;
+		}
+
+		ReturnDirection = direction switch
+		{
+			NORTH => SOUTH,
+			SOUTH => NORTH,
+			EAST => WEST,
+			WEST => EAST,
+			_ => throw new InvalidOperationException("Unsupported movement direction.")
+		};
+
 		CurrentRoom = destination;
 		message = $"You move {direction} to {CurrentRoom.Name}.";
-		return true;
-	}
-	public bool TryTake(string itemName, out string message)
-	{
-		Item? item = CurrentRoom.FindItem(itemName);
-
-		if (item is null)
-		{
-			message = $"There is no {itemName} in {CurrentRoom.Name}.";
-			return false;
-		}
-
-		CurrentRoom.RemoveItem(item);
-		_inventory.Add(item);
-		message = $"You take the {item.Name}.";
-		return true;
-	}
-	public bool TryDrop(string itemName, out string message)
-	{
-		int matchIndex = _inventory.FindIndex(item =>
-			string.Equals(item.Name, itemName, StringComparison.OrdinalIgnoreCase));
-
-		if (matchIndex < 0)
-		{
-			message = $"You are not carrying {itemName}.";
-			return false;
-		}
-
-		Item item = _inventory[matchIndex];
-
-		CurrentRoom.PlaceItem(item);
-		_inventory.RemoveAt(matchIndex);
-
-		message = $"You drop the {item.Name}.";
 		return true;
 	}
 }
